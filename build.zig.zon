@@ -1,0 +1,12 @@
+.{
+    .name = .dodo,
+    .version = "0.1.0",
+    .fingerprint = 0xa17e13fda495e13,
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "dodo",
+        "LICENSE",
+    },
+}
