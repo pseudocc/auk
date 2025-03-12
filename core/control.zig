@@ -15,7 +15,7 @@ fn printEsc(comptime fmt: []const u8, context: anytype, writer: anytype) !void {
 
 /// Single Character (SC) Sequence
 pub const SC = struct {
-    command: u8,
+    command: []const u8,
     count: ?u16 = null,
 
     pub fn format(
@@ -38,6 +38,7 @@ pub const CSI = struct {
     pub const Params = union(enum) {
         const Sentinel = std.math.maxInt(u16);
 
+        none: void,
         owned: [2]u16,
         disowned: []const u16,
 
@@ -55,8 +56,8 @@ pub const CSI = struct {
     /// DEC Private Mode
     /// `ESC [ ? <params> <command>]`
     dec: bool = false,
-    command: u8,
-    params: Params,
+    command: []const u8,
+    params: Params = .none,
 
     pub const Switch = struct {
         on: CSI,
@@ -66,12 +67,12 @@ pub const CSI = struct {
             return .{
                 .on = .{
                     .dec = dec,
-                    .command = 'h',
+                    .command = "h",
                     .params = Params.one(code),
                 },
                 .off = .{
                     .dec = dec,
-                    .command = 'l',
+                    .command = "l",
                     .params = Params.one(code),
                 },
             };
@@ -90,9 +91,10 @@ pub const CSI = struct {
             try writer.writeByte('?');
         }
 
-        const params = switch (self.params) {
+        const params: []const u8 = switch (self.params) {
             .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
             .disowned => |case| case,
+            .none => &.{},
         };
         for (params, 0..) |param, i| {
             if (i != 0) {
@@ -100,6 +102,6 @@ pub const CSI = struct {
             }
             try writer.print("{d}", .{param});
         }
-        try writer.writeByte(self.command);
+        try writer.print("{s}", .{self.command});
     }
 };
