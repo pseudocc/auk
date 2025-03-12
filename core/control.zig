@@ -13,20 +13,20 @@ fn printEsc(comptime fmt: []const u8, context: anytype, writer: anytype) !void {
     std.fmt.invalidFmtError(fmt, context);
 }
 
-/// Single Character (SC) Sequence
-pub const SC = struct {
+/// Escape Sequence
+pub const ESC = struct {
     command: []const u8,
-    count: ?u16 = null,
+    n: ?u8 = null,
 
     pub fn format(
-        self: SC,
+        self: ESC,
         comptime fmt: []const u8,
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         try printEsc(fmt, self, writer);
-        if (self.count) |count| {
-            try writer.print("{d}", .{count});
+        if (self.n) |n| {
+            try writer.print("{d}", .{n});
         }
         try writer.writeByte(self.command);
     }
