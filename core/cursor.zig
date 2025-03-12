@@ -118,3 +118,11 @@ pub const style = struct {
         return inner(5 + @intFromEnum(hl));
     }
 };
+
+/// Index (IND)
+/// `ESC D`
+pub const index = ESC{ .command = "D" };
+
+/// Reverse Index (RI)
+/// `ESC M`
+pub const rindex = ESC{ .command = "M" };
