@@ -1,9 +1,13 @@
 const c = @import("control.zig");
 const CSI = c.CSI;
+const ESC = c.ESC;
+
+/// Full Reset (RIS)
+/// `ESC c`
+pub const reset = ESC{ .command = "c" };
 
 /// Insert Mode (IRM)
 /// `ESC [ 4 h` or `ESC [ 4 l`
-/// default: replace
 pub const input = struct {
     const toggle = CSI.Switch.init(4, false);
     pub const insert = toggle.on;
