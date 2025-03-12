@@ -27,6 +27,8 @@ pub const mouse = struct {
     pub const untrack = toggle.off;
 };
 
+pub const cursor = @import("cursor.zig");
+
 pub fn hello(writer: anytype) !void {
     try writer.print("🌊🐦\n", .{});
 }
