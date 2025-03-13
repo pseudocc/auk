@@ -43,7 +43,8 @@ pub const CSI = struct {
         disowned: []const u16,
 
         pub fn one(v: u16) Params {
-            return two(v, Sentinel);
+            std.debug.assert(v != Sentinel);
+            return .{ .owned = .{ v, Sentinel } };
         }
 
         pub fn two(v0: u16, v1: u16) Params {
@@ -86,7 +87,7 @@ pub const CSI = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        const params: []const u8 = switch (self.params) {
+        const params: []const u16 = switch (self.params) {
             .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
             .disowned => |case| case,
             .none => &.{},
