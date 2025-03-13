@@ -56,6 +56,7 @@ pub const CSI = struct {
     /// DEC Private Mode
     /// `ESC [ ? <params> <command>]`
     dec: bool = false,
+    maybe_empty: bool = false,
     command: []const u8,
     params: Params = .none,
 
@@ -85,17 +86,31 @@ pub const CSI = struct {
         _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
+        const params: []const u8 = switch (self.params) {
+            .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
+            .disowned => |case| case,
+            .none => &.{},
+        };
+
+        if (self.maybe_empty) {
+            var skip = true;
+            for (params) |param| {
+                if (param != 0) {
+                    skip = false;
+                    break;
+                }
+            }
+            if (skip) {
+                return;
+            }
+        }
+
         try printEsc(fmt, self, writer);
         try writer.writeByte('[');
         if (self.dec) {
             try writer.writeByte('?');
         }
 
-        const params: []const u8 = switch (self.params) {
-            .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
-            .disowned => |case| case,
-            .none => &.{},
-        };
         for (params, 0..) |param, i| {
             if (i != 0) {
                 try writer.writeByte(';');
