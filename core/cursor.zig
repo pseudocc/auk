@@ -144,3 +144,13 @@ pub const index = ESC{ .command = "D" };
 /// Reverse Index (RI)
 /// `ESC M`
 pub const rindex = ESC{ .command = "M" };
+
+/// Cursor Horizontal Tabulation (CBT / CHT)
+/// `ESC [ <n> I` when n is positive
+/// `ESC [ <n> Z` when n is negative
+pub fn tab(n: i16) CSI {
+    return if (n < 0)
+        csiOne("Z", @intCast(-n))
+    else
+        csiOne("I", @intCast(n));
+}
