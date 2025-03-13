@@ -140,3 +140,23 @@ pub const CSI = struct {
         try writer.print("{s}", .{self.command});
     }
 };
+
+fn expect(expected: []const u8, actual: anytype) !void {
+    try std.testing.expectFmt(expected, "{}", .{actual});
+}
+
+test ESC {
+    try expect("\x1bA", ESC{ .command = "A" });
+    try expect("\x1b1A", ESC{ .command = "A", .n = 1 });
+    try expect("\x1b11B", ESC{ .command = "B", .n = 11 });
+}
+
+test CSI {
+    try expect("\x1b[A", CSI{ .command = "A" });
+    try expect("\x1b[1A", CSI{ .command = "A", .params = CSI.Params.one(1) });
+    try expect("\x1b[1A", CSI.v("A", 1));
+    try expect("", CSI.n("A", 0));
+    try expect("\x1b[?1A", CSI{ .command = "A", .params = CSI.Params.one(1), .dec = true });
+    try expect("\x1b[1;2A", CSI{ .command = "A", .params = CSI.Params.two(1, 2) });
+    try expect("\x1b[1;2;3;4B", CSI{ .command = "B", .params = .{ .disowned = &.{ 1, 2, 3, 4 } } });
+}
