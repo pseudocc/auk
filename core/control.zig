@@ -28,7 +28,7 @@ pub const ESC = struct {
         if (self.n) |n| {
             try writer.print("{d}", .{n});
         }
-        try writer.writeByte(self.command);
+        try writer.print("{s}", .{self.command});
     }
 };
 
