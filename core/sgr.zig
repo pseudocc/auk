@@ -17,16 +17,18 @@ background: ?Color = null,
 
 fn Buffer(comptime N: u8) type {
     return struct {
-        data: [N]u16,
+        const Self = @This();
+
+        data: [N]u16 = std.mem.zeroes([N]u16),
         i: u8 = 0,
 
-        fn append(self: *Buffer, value: u16) void {
+        fn append(self: *Self, value: u16) void {
             std.debug.assert(self.i < N);
             self.data[self.i] = value;
             self.i += 1;
         }
 
-        fn appendColor(self: *Buffer, offset: u16, color: Color) void {
+        fn appendColor(self: *Self, offset: u16, color: Color) void {
             switch (color) {
                 .c8 => |case| {
                     self.append(offset + @intFromEnum(case));
@@ -55,7 +57,7 @@ fn Buffer(comptime N: u8) type {
             }
         }
 
-        fn slice(self: *const Buffer) []const u16 {
+        fn slice(self: *const Self) []const u16 {
             if (@inComptime()) {
                 const final = self.data[0..self.i].*;
                 return &final;
@@ -66,7 +68,7 @@ fn Buffer(comptime N: u8) type {
 }
 
 pub fn csi(self: SGR) CSI {
-    const buffer = Buffer(24){};
+    var buffer = Buffer(24){};
 
     if (self.bold) |enable| {
         buffer.append(if (enable) 1 else 22);
