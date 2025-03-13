@@ -2,48 +2,40 @@ const c = @import("control.zig");
 const CSI = c.CSI;
 const ESC = c.ESC;
 
-fn csiOne(command: []const u8, n: u16) CSI {
-    return CSI{
-        .command = command,
-        .params = CSI.Params.one(n),
-        .maybe_empty = true,
-    };
-}
-
 /// Cursor Up (CUU)
 /// `ESC [ <n> A`
 pub fn up(n: u16) CSI {
-    return csiOne("A", n);
+    return CSI.n("A", n);
 }
 
 /// Cursor Down (CUD)
 /// `ESC [ <n> B`
 pub fn down(n: u16) CSI {
-    return csiOne("B", n);
+    return CSI.n("B", n);
 }
 
 /// Cursor Forward (CUF)
 /// `ESC [ <n> C`
 pub fn right(n: u16) CSI {
-    return csiOne("C", n);
+    return CSI.n("C", n);
 }
 
 /// Cursor Backward (CUB)
 /// `ESC [ <n> D`
 pub fn left(n: u16) CSI {
-    return csiOne("D", n);
+    return CSI.n("D", n);
 }
 
 /// Cursor Next Line (CNL)
 /// `ESC [ <n> E`
 pub fn next(n: u16) ESC {
-    return csiOne("E", n);
+    return CSI.n("E", n);
 }
 
 /// Cursor Previous Line (CPL)
 /// `ESC [ <n> F`
 pub fn prev(n: u16) ESC {
-    return csiOne("F", n);
+    return CSI.n("F", n);
 }
 
 /// Cursor Position (CUP)
@@ -65,13 +57,13 @@ pub fn goto(x: u16, y: u16) CSI {
 /// Cursor Horizontal Position Absolute (HPA)
 /// `ESC [ <x> G`
 pub fn col(x: u16) CSI {
-    return csiOne("G", x);
+    return CSI.n("G", x);
 }
 
 /// Cursor Vertical Position Absolute (VPA)
 /// `ESC [ <y> d`
 pub fn row(y: u16) CSI {
-    return csiOne("d", y);
+    return CSI.n("d", y);
 }
 
 /// Save Cursor (DECSC)
@@ -94,19 +86,19 @@ pub const hide = visible.off;
 
 /// Report Cursor Position (CPR)
 /// `ESC [ 6 n`
-pub const position = csiOne("n", 6);
+pub const position = CSI.n("n", 6);
 
 pub const scroll = struct {
     /// Scroll Up (SU)
     /// `ESC [ <n> S`
     pub fn up(n: u16) CSI {
-        return csiOne("S", n);
+        return CSI.n("S", n);
     }
 
     /// Scroll Down (SD)
     /// `ESC [ <n> T`
     pub fn down(n: u16) CSI {
-        return csiOne("T", n);
+        return CSI.n("T", n);
     }
 };
 
@@ -150,7 +142,7 @@ pub const rindex = ESC{ .command = "M" };
 /// `ESC [ <n> Z` when n is negative
 pub fn tab(n: i16) CSI {
     return if (n < 0)
-        csiOne("Z", @intCast(-n))
+        CSI.n("Z", @intCast(-n))
     else
-        csiOne("I", @intCast(n));
+        CSI.n("I", @intCast(n));
 }

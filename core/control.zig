@@ -42,15 +42,15 @@ pub const CSI = struct {
         owned: [2]u16,
         disowned: []const u16,
 
-        pub fn one(v: u16) Params {
-            std.debug.assert(v != Sentinel);
-            return .{ .owned = .{ v, Sentinel } };
+        pub fn one(param: u16) Params {
+            std.debug.assert(param != Sentinel);
+            return .{ .owned = .{ param, Sentinel } };
         }
 
-        pub fn two(v0: u16, v1: u16) Params {
-            std.debug.assert(v0 != Sentinel);
-            std.debug.assert(v1 != Sentinel);
-            return .{ .owned = .{ v0, v1 } };
+        pub fn two(param0: u16, param1: u16) Params {
+            std.debug.assert(param0 != Sentinel);
+            std.debug.assert(param1 != Sentinel);
+            return .{ .owned = .{ param0, param1 } };
         }
     };
 
@@ -80,6 +80,25 @@ pub const CSI = struct {
             };
         }
     };
+
+    /// Internal Helper Function
+    /// one parameter without maybe_empty flag
+    pub fn v(comptime command: []const u8, param: u16) CSI {
+        return CSI{
+            .command = command,
+            .params = CSI.Params.one(param),
+        };
+    }
+
+    /// Internal Helper Function
+    /// one parameter with maybe_empty flag
+    pub fn n(comptime command: []const u8, param: u16) CSI {
+        return CSI{
+            .command = command,
+            .params = CSI.Params.one(param),
+            .maybe_empty = true,
+        };
+    }
 
     pub fn format(
         self: CSI,
