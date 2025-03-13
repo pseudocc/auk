@@ -1,96 +1,119 @@
 const std = @import("std");
 const CSI = @import("control.zig").CSI;
 
-/// SGR Intermediate Representation
-/// `ESC [ <params> m`
-/// This follows the `Builder` design pattern.
-pub const IR = struct {
-    params: std.ArrayList(u16),
+const SGR = @This();
 
-    pub fn csi(self: IR) CSI {
-        return CSI{
-            .command = "m",
-            .params = .{ .disowned = self.params.items },
-        };
-    }
+bold: ?bool = null,
+faint: ?bool = null,
+italic: ?bool = null,
+underline: ?bool = null,
+blink: ?bool = null,
+inverse: ?bool = null,
+conceal: ?bool = null,
+strike: ?bool = null,
 
-    pub fn bold(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 1 else 22);
-        return self;
-    }
+foreground: ?Color = null,
+background: ?Color = null,
 
-    pub fn faint(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 2 else 22);
-        return self;
-    }
+fn Buffer(comptime N: u8) type {
+    return struct {
+        data: [N]u16,
+        i: u8 = 0,
 
-    pub fn italic(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 3 else 23);
-        return self;
-    }
-
-    pub fn underline(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 4 else 24);
-        return self;
-    }
-
-    pub fn blink(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 5 else 25);
-        return self;
-    }
-
-    pub fn inverse(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 7 else 27);
-        return self;
-    }
-
-    pub fn conceal(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 8 else 28);
-        return self;
-    }
-
-    pub fn strike(self: *IR, value: bool) !*IR {
-        try self.params.append(if (value) 9 else 29);
-        return self;
-    }
-
-    pub fn foreground(self: *IR, value: Color) !*IR {
-        return self.setColor(value, 30);
-    }
-
-    pub fn background(self: *IR, value: Color) !*IR {
-        return self.setColor(value, 40);
-    }
-
-    fn setColor(self: *IR, value: Color, offset: u16) !*IR {
-        switch (value) {
-            .c8 => |case| {
-                try self.params.append(offset + @intFromEnum(case));
-            },
-            .c256 => |case| {
-                const params = try self.params.addManyAsArray(3);
-                params.* = .{ offset + 8, 5, case };
-            },
-            .rgb => |case| {
-                const params = try self.params.addManyAsArray(5);
-                params.* = .{ offset + 8, 2, case[0], case[1], case[2] };
-            },
-            .reset => {
-                try self.params.append(offset + 9);
-            },
+        fn append(self: *Buffer, value: u16) void {
+            std.debug.assert(self.i < N);
+            self.data[self.i] = value;
+            self.i += 1;
         }
-        return self;
+
+        fn appendColor(self: *Buffer, offset: u16, color: Color) void {
+            switch (color) {
+                .c8 => |case| {
+                    self.append(offset + @intFromEnum(case));
+                },
+                .c256 => |case| {
+                    const params = self.data[self.i..];
+                    std.debug.assert(params.len >= 3);
+                    params[0] = offset + 8;
+                    params[1] = 5;
+                    params[2] = case;
+                    self.i += 3;
+                },
+                .rgb => |case| {
+                    const params = self.data[self.i..];
+                    std.debug.assert(params.len >= 5);
+                    params[0] = offset + 8;
+                    params[1] = 2;
+                    params[2] = case[0];
+                    params[3] = case[1];
+                    params[4] = case[2];
+                    self.i += 5;
+                },
+                .reset => {
+                    self.append(offset + 9);
+                },
+            }
+        }
+
+        fn slice(self: *const Buffer) []const u16 {
+            if (@inComptime()) {
+                const final = self.data[0..self.i].*;
+                return &final;
+            }
+            return self.data[0..self.i];
+        }
+    };
+}
+
+pub fn csi(self: SGR) CSI {
+    const buffer = Buffer(24){};
+
+    if (self.bold) |enable| {
+        buffer.append(if (enable) 1 else 22);
+    }
+    if (self.faint) |enable| {
+        buffer.append(if (enable) 2 else 22);
+    }
+    if (self.italic) |enable| {
+        buffer.append(if (enable) 3 else 23);
+    }
+    if (self.underline) |enable| {
+        buffer.append(if (enable) 4 else 24);
+    }
+    if (self.blink) |enable| {
+        buffer.append(if (enable) 5 else 25);
+    }
+    if (self.inverse) |enable| {
+        buffer.append(if (enable) 7 else 27);
+    }
+    if (self.conceal) |enable| {
+        buffer.append(if (enable) 8 else 28);
+    }
+    if (self.strike) |enable| {
+        buffer.append(if (enable) 9 else 29);
     }
 
-    pub fn format(
-        self: IR,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        try self.csi().format(fmt, options, writer);
+    if (self.foreground) |color| {
+        buffer.appendColor(30, color);
     }
-};
+    if (self.background) |color| {
+        buffer.appendColor(40, color);
+    }
+
+    return CSI{
+        .command = "m",
+        .params = .{ .disowned = buffer.slice() },
+    };
+}
+
+pub fn format(
+    self: SGR,
+    comptime fmt: []const u8,
+    options: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    try CSI.format(self.csi(), fmt, options, writer);
+}
 
 pub const Color = union(enum) {
     const Color16 = enum(u8) {
@@ -119,57 +142,4 @@ pub const Color = union(enum) {
     reset,
 };
 
-const Options = struct {
-    bold: ?bool = null,
-    faint: ?bool = null,
-    italic: ?bool = null,
-    underline: ?bool = null,
-    blink: ?bool = null,
-    inverse: ?bool = null,
-    conceal: ?bool = null,
-    strike: ?bool = null,
-
-    foreground: ?Color = null,
-    background: ?Color = null,
-};
-
-fn construct(ir: *IR, options: Options) !void {
-    inline for (.{
-        "bold",
-        "faint",
-        "italic",
-        "underline",
-        "blink",
-        "inverse",
-        "conceal",
-        "strike",
-        "foreground",
-        "background",
-    }) |key| {
-        if (@field(options, key)) |value| {
-            try @field(IR, key)(ir, value);
-        }
-    }
-}
-
-/// SGR CSI constructor
-/// `ESC [ <params> m`
-pub fn from(buffer: []u8, options: Options) !CSI {
-    var fba = std.heap.FixedBufferAllocator.init(buffer);
-    var ir = IR{ .params = std.ArrayList(u16).init(fba.allocator()) };
-    try construct(&ir, options);
-    return ir.csi();
-}
-
-/// SGR CSI constructor
-/// `ESC [ <params> m`
-/// Caller owns the memory of the returned `CSI.params.owned`.
-pub fn alloc(allocator: std.mem.Allocator, options: Options) !CSI {
-    var ir = IR{ .params = std.ArrayList(u16).init(allocator) };
-    try construct(&ir, options);
-    const params = try ir.params.toOwnedSlice();
-    return CSI{
-        .command = "m",
-        .params = .{ .owned = params },
-    };
-}
+pub const reset = csi(SGR{});

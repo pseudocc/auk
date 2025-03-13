@@ -42,7 +42,7 @@ pub const insert = edit.insert;
 pub const delete = edit.delete;
 pub const erase = edit.erase;
 
-pub const sgr = @import("sgr.zig");
+pub const SGR = @import("sgr.zig");
 
 pub const version = manifest.version;
 
