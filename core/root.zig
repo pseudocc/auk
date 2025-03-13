@@ -33,6 +33,12 @@ pub const mouse = struct {
 
 pub const cursor = @import("cursor.zig");
 
+// usingnamespace is about to be deprecated, so not using it here
+const edit = @import("edit.zig");
+pub const insert = edit.insert;
+pub const delete = edit.delete;
+pub const erase = edit.erase;
+
 pub fn hello(writer: anytype) !void {
     try writer.print("🌊🐦\n", .{});
 }
