@@ -4,5 +4,5 @@ const auk = @import("auk");
 const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
-    try auk.hello(stdout);
+    try stdout.print("{s}\n", .{auk.description});
 }

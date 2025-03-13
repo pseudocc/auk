@@ -1,12 +1,12 @@
 .{
-    .name = .dodo,
+    .name = .auk,
     .version = "0.1.0",
-    .fingerprint = 0xa17e13fda495e13,
-    .dependencies = .{},
+    .fingerprint = 0x3e7c4d66782ff3e4,
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "dodo",
+        "core",
         "LICENSE",
     },
+    .min_zig_version = "0.14.0",
 }

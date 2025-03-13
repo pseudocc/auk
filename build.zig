@@ -1,12 +1,38 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
-pub fn build(b: *std.Build) void {
+const Version = std.SemanticVersion;
+
+const Manifest = struct {
+    const ZON = struct { version: []const u8 };
+
+    version: Version,
+
+    fn parse(allocator: std.mem.Allocator, source: [:0]const u8) !Manifest {
+        const zon = try std.zon.parse.fromSlice(
+            ZON,
+            allocator,
+            source,
+            null,
+            .{ .ignore_unknown_fields = true },
+        );
+        return .{ .version = try Version.parse(zon.version) };
+    }
+};
+
+pub fn build(b: *std.Build) !void {
+    const manifest = try Manifest.parse(b.allocator, @embedFile("build.zig.zon"));
+
+    const manifest_options = b.addOptions();
+    manifest_options.addOption(Version, "version", manifest.version);
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const core_module = b.addModule("auk", .{
         .root_source_file = b.path("core/root.zig"),
     });
+    core_module.addOptions("manifest", manifest_options);
 
     const auk = b.addExecutable(.{
         .name = "auk",

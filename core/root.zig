@@ -1,3 +1,6 @@
+const std = @import("std");
+const builtin = @import("builtin");
+const manifest = @import("manifest");
 const c = @import("control.zig");
 const CSI = c.CSI;
 const ESC = c.ESC;
@@ -41,6 +44,16 @@ pub const erase = edit.erase;
 
 pub const sgr = @import("sgr.zig");
 
-pub fn hello(writer: anytype) !void {
-    try writer.print("🌊🐦\n", .{});
-}
+pub const version = manifest.version;
+
+pub const description = std.fmt.comptimePrint(
+    "🌊AUK🐦 {} ({s}-{s}-{s} {s}) [ZIG {}]",
+    .{
+        version,
+        @tagName(builtin.cpu.arch),
+        @tagName(builtin.os.tag),
+        @tagName(builtin.abi),
+        @tagName(builtin.mode),
+        builtin.zig_version,
+    },
+);
