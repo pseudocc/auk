@@ -65,7 +65,7 @@ pub const CSI = struct {
         on: CSI,
         off: CSI,
 
-        fn init(comptime code: u8, dec: bool) Switch {
+        pub fn init(comptime code: u16, dec: bool) Switch {
             return .{
                 .on = .{
                     .dec = dec,
@@ -146,7 +146,7 @@ pub fn Expect(comptime T: type) type {
         expected: []const u8,
         actual: T,
 
-        fn check(self: @This()) !void {
+        pub fn check(self: @This()) !void {
             try std.testing.expectFmt(self.expected, "{}", .{self.actual});
         }
     };
