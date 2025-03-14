@@ -22,6 +22,43 @@ fn Buffer(comptime N: u8) type {
         data: [N]u16 = std.mem.zeroes([N]u16),
         i: u8 = 0,
 
+        fn init(sgr: SGR) Self {
+            var buffer = Self{};
+            if (sgr.bold) |enable| {
+                buffer.append(if (enable) 1 else 22);
+            }
+            if (sgr.faint) |enable| {
+                buffer.append(if (enable) 2 else 22);
+            }
+            if (sgr.italic) |enable| {
+                buffer.append(if (enable) 3 else 23);
+            }
+            if (sgr.underline) |enable| {
+                buffer.append(if (enable) 4 else 24);
+            }
+            if (sgr.blink) |enable| {
+                buffer.append(if (enable) 5 else 25);
+            }
+            if (sgr.inverse) |enable| {
+                buffer.append(if (enable) 7 else 27);
+            }
+            if (sgr.conceal) |enable| {
+                buffer.append(if (enable) 8 else 28);
+            }
+            if (sgr.strike) |enable| {
+                buffer.append(if (enable) 9 else 29);
+            }
+
+            if (sgr.foreground) |color| {
+                buffer.appendColor(30, color);
+            }
+            if (sgr.background) |color| {
+                buffer.appendColor(40, color);
+            }
+
+            return buffer;
+        }
+
         fn append(self: *Self, value: u16) void {
             std.debug.assert(self.i < N);
             self.data[self.i] = value;
@@ -30,7 +67,7 @@ fn Buffer(comptime N: u8) type {
 
         fn appendColor(self: *Self, offset: u16, color: Color) void {
             switch (color) {
-                .c8 => |case| {
+                .c16 => |case| {
                     self.append(offset + @intFromEnum(case));
                 },
                 .c256 => |case| {
@@ -57,54 +94,12 @@ fn Buffer(comptime N: u8) type {
             }
         }
 
-        fn slice(self: *const Self) []const u16 {
-            if (@inComptime()) {
-                const final = self.data[0..self.i].*;
-                return &final;
-            }
-            return self.data[0..self.i];
+        fn csi(self: *const Self) CSI {
+            return CSI{
+                .command = "m",
+                .params = .{ .disowned = self.data[0..self.i] },
+            };
         }
-    };
-}
-
-pub fn csi(self: SGR) CSI {
-    var buffer = Buffer(24){};
-
-    if (self.bold) |enable| {
-        buffer.append(if (enable) 1 else 22);
-    }
-    if (self.faint) |enable| {
-        buffer.append(if (enable) 2 else 22);
-    }
-    if (self.italic) |enable| {
-        buffer.append(if (enable) 3 else 23);
-    }
-    if (self.underline) |enable| {
-        buffer.append(if (enable) 4 else 24);
-    }
-    if (self.blink) |enable| {
-        buffer.append(if (enable) 5 else 25);
-    }
-    if (self.inverse) |enable| {
-        buffer.append(if (enable) 7 else 27);
-    }
-    if (self.conceal) |enable| {
-        buffer.append(if (enable) 8 else 28);
-    }
-    if (self.strike) |enable| {
-        buffer.append(if (enable) 9 else 29);
-    }
-
-    if (self.foreground) |color| {
-        buffer.appendColor(30, color);
-    }
-    if (self.background) |color| {
-        buffer.appendColor(40, color);
-    }
-
-    return CSI{
-        .command = "m",
-        .params = .{ .disowned = buffer.slice() },
     };
 }
 
@@ -114,7 +109,8 @@ pub fn format(
     options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    try CSI.format(self.csi(), fmt, options, writer);
+    const buffer = Buffer(24).init(self);
+    try CSI.format(buffer.csi(), fmt, options, writer);
 }
 
 pub const Color = union(enum) {
@@ -138,10 +134,10 @@ pub const Color = union(enum) {
         bright_white = 67,
     };
 
-    c8: Color16,
+    c16: Color16,
     c256: u8,
     rgb: [3]u8,
     reset,
 };
 
-pub const reset = csi(SGR{});
+pub const reset = SGR{};
