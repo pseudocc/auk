@@ -54,6 +54,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    auk_test.root_module.addImport("auk", core_module);
     const run_auk_test = b.addRunArtifact(auk_test);
 
     const test_step = b.step("test", "Run unit tests");
