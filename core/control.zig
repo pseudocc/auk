@@ -141,22 +141,59 @@ pub const CSI = struct {
     }
 };
 
-fn expect(expected: []const u8, actual: anytype) !void {
-    try std.testing.expectFmt(expected, "{}", .{actual});
+pub fn Expect(comptime T: type) type {
+    return struct {
+        expected: []const u8,
+        actual: T,
+
+        fn check(self: @This()) !void {
+            try std.testing.expectFmt(self.expected, "{}", .{self.actual});
+        }
+    };
 }
 
 test ESC {
-    try expect("\x1bA", ESC{ .command = "A" });
-    try expect("\x1b1A", ESC{ .command = "A", .n = 1 });
-    try expect("\x1b11B", ESC{ .command = "B", .n = 11 });
+    const E = Expect(ESC);
+    const cases = .{
+        .{ "\x1bA", ESC{ .command = "A" } },
+        .{ "\x1b1A", ESC{ .command = "A", .n = 1 } },
+        .{ "\x1b11B", ESC{ .command = "B", .n = 11 } },
+    };
+    inline for (cases) |c| {
+        const e = E{ .expected = c[0], .actual = c[1] };
+        try e.check();
+    }
 }
 
 test CSI {
-    try expect("\x1b[A", CSI{ .command = "A" });
-    try expect("\x1b[1A", CSI{ .command = "A", .params = CSI.Params.one(1) });
-    try expect("\x1b[1A", CSI.v("A", 1));
-    try expect("", CSI.n("A", 0));
-    try expect("\x1b[?1A", CSI{ .command = "A", .params = CSI.Params.one(1), .dec = true });
-    try expect("\x1b[1;2A", CSI{ .command = "A", .params = CSI.Params.two(1, 2) });
-    try expect("\x1b[1;2;3;4B", CSI{ .command = "B", .params = .{ .disowned = &.{ 1, 2, 3, 4 } } });
+    const E = Expect(CSI);
+    const cases = .{
+        .{
+            "\x1b[A",
+            CSI{ .command = "A" },
+        },
+        .{
+            "\x1b[1A",
+            CSI{ .command = "A", .params = CSI.Params.one(1) },
+        },
+        .{ "\x1b[1A", CSI.v("A", 1) },
+        .{ "", CSI.n("A", 0) },
+        .{
+            "\x1b[?1A",
+            CSI{ .command = "A", .params = CSI.Params.one(1), .dec = true },
+        },
+        .{
+            "\x1b[1;2A",
+            CSI{ .command = "A", .params = CSI.Params.two(1, 2) },
+        },
+        .{
+            "\x1b[1;2;3;4B",
+            CSI{ .command = "B", .params = .{ .disowned = &.{ 1, 2, 3, 4 } } },
+        },
+    };
+
+    inline for (cases) |c| {
+        const e = E{ .expected = c[0], .actual = c[1] };
+        try e.check();
+    }
 }
