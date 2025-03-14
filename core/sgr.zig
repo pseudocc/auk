@@ -141,3 +141,36 @@ pub const Color = union(enum) {
 };
 
 pub const reset = SGR{};
+
+test SGR {
+    const E = @import("control.zig").Expect(SGR);
+    const cases = .{
+        .{ "\x1b[m", SGR{} },
+        .{ "\x1b[1m", SGR{ .bold = true } },
+        .{
+            "\x1b[31m",
+            SGR{ .foreground = .{ .c16 = .red } },
+        },
+        .{
+            "\x1b[38;5;1m",
+            SGR{ .foreground = .{ .c256 = 1 } },
+        },
+        .{
+            "\x1b[38;2;255;0;0m",
+            SGR{ .foreground = .{ .rgb = .{ 255, 0, 0 } } },
+        },
+        .{
+            "\x1b[39m",
+            SGR{ .foreground = .reset },
+        },
+        .{
+            "\x1b[1;31m",
+            SGR{ .bold = true, .foreground = .{ .c16 = .red } },
+        },
+    };
+
+    inline for (cases) |c| {
+        const e = E{ .expected = c[0], .actual = c[1] };
+        try e.check();
+    }
+}
