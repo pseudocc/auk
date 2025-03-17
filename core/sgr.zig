@@ -25,86 +25,83 @@ fg: ?Color = null,
 /// Background color
 bg: ?Color = null,
 
-fn Buffer(comptime N: u8) type {
-    return struct {
-        const Self = @This();
+const Buffer = struct {
+    const N = 24;
+    data: [N]u16,
+    i: u8,
 
-        data: [N]u16 = std.mem.zeroes([N]u16),
-        i: u8 = 0,
+    fn init(sgr: SGR) Buffer {
+        var buffer = std.mem.zeroes(Buffer);
+        if (sgr.bd) |enable| buffer.append(if (enable) 1 else 22);
+        if (sgr.ft) |enable| buffer.append(if (enable) 2 else 22);
+        if (sgr.it) |enable| buffer.append(if (enable) 3 else 23);
+        if (sgr.ul) |enable| buffer.append(if (enable) 4 else 24);
+        if (sgr.bl) |enable| buffer.append(if (enable) 5 else 25);
+        if (sgr.rv) |enable| buffer.append(if (enable) 7 else 27);
+        if (sgr.hd) |enable| buffer.append(if (enable) 8 else 28);
+        if (sgr.st) |enable| buffer.append(if (enable) 9 else 29);
+        if (sgr.fg) |color| buffer.appendColor(30, color);
+        if (sgr.bg) |color| buffer.appendColor(40, color);
+        return buffer;
+    }
 
-        fn init(sgr: SGR) Self {
-            var buffer = Self{};
-            if (sgr.bd) |enable| buffer.append(if (enable) 1 else 22);
-            if (sgr.ft) |enable| buffer.append(if (enable) 2 else 22);
-            if (sgr.it) |enable| buffer.append(if (enable) 3 else 23);
-            if (sgr.ul) |enable| buffer.append(if (enable) 4 else 24);
-            if (sgr.bl) |enable| buffer.append(if (enable) 5 else 25);
-            if (sgr.rv) |enable| buffer.append(if (enable) 7 else 27);
-            if (sgr.hd) |enable| buffer.append(if (enable) 8 else 28);
-            if (sgr.st) |enable| buffer.append(if (enable) 9 else 29);
-            if (sgr.fg) |color| buffer.appendColor(30, color);
-            if (sgr.bg) |color| buffer.appendColor(40, color);
-            return buffer;
+    fn append(self: *Buffer, value: u16) void {
+        std.debug.assert(self.i < N);
+        self.data[self.i] = value;
+        self.i += 1;
+    }
+
+    fn appendColor(self: *Buffer, offset: u16, color: Color) void {
+        switch (color) {
+            .black => self.append(offset + 0),
+            .red => self.append(offset + 1),
+            .green => self.append(offset + 2),
+            .yellow => self.append(offset + 3),
+            .blue => self.append(offset + 4),
+            .magenta => self.append(offset + 5),
+            .cyan => self.append(offset + 6),
+            .white => self.append(offset + 7),
+
+            .b_black => self.append(offset + 60),
+            .b_red => self.append(offset + 61),
+            .b_green => self.append(offset + 62),
+            .b_yellow => self.append(offset + 63),
+            .b_blue => self.append(offset + 64),
+            .b_magenta => self.append(offset + 65),
+            .b_cyan => self.append(offset + 66),
+            .b_white => self.append(offset + 67),
+
+            .c256 => |case| {
+                const params = self.data[self.i..];
+                std.debug.assert(params.len >= 3);
+                params[0] = offset + 8;
+                params[1] = 5;
+                params[2] = case;
+                self.i += 3;
+            },
+
+            .rgb => |case| {
+                const params = self.data[self.i..];
+                std.debug.assert(params.len >= 5);
+                params[0] = offset + 8;
+                params[1] = 2;
+                params[2] = case[0];
+                params[3] = case[1];
+                params[4] = case[2];
+                self.i += 5;
+            },
+
+            .reset => self.append(offset + 9),
         }
+    }
 
-        fn append(self: *Self, value: u16) void {
-            std.debug.assert(self.i < N);
-            self.data[self.i] = value;
-            self.i += 1;
-        }
-
-        fn appendColor(self: *Self, offset: u16, color: Color) void {
-            switch (color) {
-                .black => self.append(offset + 0),
-                .red => self.append(offset + 1),
-                .green => self.append(offset + 2),
-                .yellow => self.append(offset + 3),
-                .blue => self.append(offset + 4),
-                .magenta => self.append(offset + 5),
-                .cyan => self.append(offset + 6),
-                .white => self.append(offset + 7),
-
-                .b_black => self.append(offset + 60),
-                .b_red => self.append(offset + 61),
-                .b_green => self.append(offset + 62),
-                .b_yellow => self.append(offset + 63),
-                .b_blue => self.append(offset + 64),
-                .b_magenta => self.append(offset + 65),
-                .b_cyan => self.append(offset + 66),
-                .b_white => self.append(offset + 67),
-
-                .c256 => |case| {
-                    const params = self.data[self.i..];
-                    std.debug.assert(params.len >= 3);
-                    params[0] = offset + 8;
-                    params[1] = 5;
-                    params[2] = case;
-                    self.i += 3;
-                },
-
-                .rgb => |case| {
-                    const params = self.data[self.i..];
-                    std.debug.assert(params.len >= 5);
-                    params[0] = offset + 8;
-                    params[1] = 2;
-                    params[2] = case[0];
-                    params[3] = case[1];
-                    params[4] = case[2];
-                    self.i += 5;
-                },
-
-                .reset => self.append(offset + 9),
-            }
-        }
-
-        fn csi(self: *const Self) CSI {
-            return CSI{
-                .command = "m",
-                .params = .{ .disowned = self.data[0..self.i] },
-            };
-        }
-    };
-}
+    fn csi(self: *const Buffer) CSI {
+        return CSI{
+            .command = "m",
+            .params = .{ .disowned = self.data[0..self.i] },
+        };
+    }
+};
 
 pub fn format(
     self: SGR,
@@ -112,7 +109,7 @@ pub fn format(
     options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    const buffer = Buffer(24).init(self);
+    const buffer = Buffer.init(self);
     try CSI.format(buffer.csi(), fmt, options, writer);
 }
 
