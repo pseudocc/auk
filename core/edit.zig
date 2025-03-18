@@ -1,6 +1,5 @@
 const c = @import("control.zig");
 const CSI = c.CSI;
-const ESC = c.ESC;
 
 pub const insert = struct {
     /// Insert Blanks (ICH)
@@ -31,22 +30,22 @@ pub const delete = struct {
 };
 
 pub const erase = struct {
-    pub const Display = enum {
+    pub const Display = enum(u2) {
+        below,
+        /// Entire display
         /// Above cursor
         above,
         /// Below cursor
-        below,
-        /// Entire display
         both,
         /// Entire display and scrollback buffer
         all,
     };
 
-    pub const Line = enum {
-        /// Cursor to beginning of line
-        left,
+    pub const Line = enum(u2) {
         /// Cursor to end of line
         right,
+        /// Cursor to beginning of line
+        left,
         /// Entire line
         both,
     };
@@ -55,31 +54,14 @@ pub const erase = struct {
     /// `ESC [ <n> J`
     /// `n` is one of the `Display` variants
     pub fn display(d: Display) CSI {
-        const params = switch (d) {
-            .above => CSI.Params.one(1),
-            .below => CSI.Params.none,
-            .both => CSI.Params.one(2),
-            .all => CSI.Params.one(3),
-        };
-        return CSI{
-            .command = "J",
-            .params = params,
-        };
+        return CSI.v("J", @intFromEnum(d));
     }
 
     /// Erase Line (EL)
     /// `ESC [ <n> K`
     /// `n` is one of the `Line` variants
     pub fn line(l: Line) CSI {
-        const params = switch (l) {
-            .left => CSI.Params.one(1),
-            .right => CSI.Params.none,
-            .both => CSI.Params.one(2),
-        };
-        return CSI{
-            .command = "K",
-            .params = params,
-        };
+        return CSI.v("K", @intFromEnum(l));
     }
 
     /// Erase Characters (ECH)
