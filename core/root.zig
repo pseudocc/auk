@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const manifest = @import("manifest");
+const manifest = @import("auk.manifest");
 const c = @import("control.zig");
 const CSI = c.CSI;
 const ESC = c.ESC;

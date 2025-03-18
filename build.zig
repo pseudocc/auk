@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) !void {
     const core_module = b.addModule("auk", .{
         .root_source_file = b.path("core/root.zig"),
     });
-    core_module.addOptions("manifest", manifest_options);
+    core_module.addOptions("auk.manifest", manifest_options);
 
     const terminal_module = b.addModule("auk.terminal", .{
         .root_source_file = b.path("terminal/root.zig"),
