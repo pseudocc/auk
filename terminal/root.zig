@@ -83,7 +83,7 @@ pub fn deinit(self: *Terminal) void {
 }
 
 pub fn size(self: *Terminal) !Size {
-    var ws: linux.winsize = undefined;
+    var ws: posix.winsize = undefined;
     const ret = linux.ioctl(self.tty.handle, linux.T.IOCGWINSZ, @intFromPtr(&ws));
     switch (linux.E.init(ret)) {
         .SUCCESS => {},
