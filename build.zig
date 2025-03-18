@@ -34,6 +34,10 @@ pub fn build(b: *std.Build) !void {
     });
     core_module.addOptions("manifest", manifest_options);
 
+    const terminal_module = b.addModule("auk", .{
+        .root_source_file = b.path("terminal/root.zig"),
+    });
+
     const auk = b.addExecutable(.{
         .name = "auk",
         .root_source_file = b.path("auk.zig"),
@@ -41,6 +45,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     auk.root_module.addImport("auk", core_module);
+    auk.root_module.addImport("auk.terminal", terminal_module);
     b.installArtifact(auk);
 
     const run_auk = b.addRunArtifact(auk);
