@@ -38,7 +38,9 @@
           src = with lib.fileset; toSource {
             root = ./.;
             fileset = unions [
-              ./auk
+              ./core
+              ./terminal
+              ./manifest.zig
               ./auk.zig
               ./build.zig
               ./build.zig.zon

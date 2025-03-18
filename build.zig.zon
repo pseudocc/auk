@@ -1,10 +1,11 @@
 .{
     .name = .auk,
-    .version = "0.1.0",
+    .version = "0.1.0-dev",
     .fingerprint = 0x3e7c4d66782ff3e4,
     .paths = .{
         "build.zig",
         "build.zig.zon",
+        "manifest.zig",
         "core",
         "terminal",
         "LICENSE",
