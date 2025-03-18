@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
     });
     core_module.addOptions("manifest", manifest_options);
 
-    const terminal_module = b.addModule("auk", .{
+    const terminal_module = b.addModule("auk.terminal", .{
         .root_source_file = b.path("terminal/root.zig"),
     });
 

@@ -6,6 +6,7 @@
         "build.zig",
         "build.zig.zon",
         "core",
+        "terminal",
         "LICENSE",
     },
     .min_zig_version = "0.14.0",
