@@ -5,12 +5,17 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const core_module = b.addModule("auk", .{ .root_source_file = b.path("core/root.zig"), .imports = &.{.{
-        .name = "auk.manifest",
-        .module = b.createModule(.{
-            .root_source_file = b.path("manifest.zig"),
-        }),
-    }} });
+    const core_module = b.addModule("auk", .{
+        .root_source_file = b.path("core/root.zig"),
+        .imports = &.{
+            .{
+                .name = "auk.manifest",
+                .module = b.createModule(.{
+                    .root_source_file = b.path("manifest.zig"),
+                }),
+            },
+        },
+    });
 
     const terminal_module = b.addModule("auk.terminal", .{
         .root_source_file = b.path("terminal/root.zig"),
