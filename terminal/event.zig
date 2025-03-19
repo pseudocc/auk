@@ -14,6 +14,15 @@ const cc = std.ascii.control_code;
 /// }
 /// ```
 pub const keys = struct {
+    pub const Pack = packed struct(u16) {
+        base: u8,
+        shift: bool,
+        alt: bool,
+        crtl: bool,
+        noniscii: bool,
+        padding: u4,
+    };
+
     pub const left = 0x80;
     pub const right = 1 + left;
     pub const up = 2 + left;
