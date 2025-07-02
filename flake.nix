@@ -1,8 +1,7 @@
 {
   description = "🌊🐦";
 
-  # zig 0.14.0
-  inputs.nixpkgs.url = "github:nixos/nixpkgs";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
 
   outputs = {
     self,
@@ -27,14 +26,23 @@
     eachSystem (
       system: let
         pkgs = import nixpkgs {inherit system;};
-        zig = pkgs.zig_0_14;
+        zig = pkgs.zig;
         zls = pkgs.zls;
 
         mkauk = optimize: pkgs.stdenv.mkDerivation {
           inherit version;
           pname = "auk";
 
-          buildInputs = [ zig.hook ];
+          buildInputs = [
+            (zig.hook.overrideAttrs {
+              zig_default_flags = [
+                "-Dcpu=baseline"
+                "--release=${optimize}"
+                "--color off"
+              ];
+            })
+          ];
+
           src = with lib.fileset; toSource {
             root = ./.;
             fileset = unions [
@@ -71,9 +79,10 @@
             };
           };
           entries = lib.mapAttrsToList ctor.auk rec {
-            auk-debug = mkauk "Debug";
-            auk-release-fast = mkauk "ReleaseFast";
-            auk-release-safe = mkauk "ReleaseSafe";
+            auk-debug = mkauk "off";
+            auk-release-fast = mkauk "fast";
+            auk-release-safe = mkauk "safe";
+            auk-release-small = mkauk "small";
             auk = auk-release-fast;
             default = auk;
           };
