@@ -6,27 +6,22 @@ const stdout = std.io.getStdOut().writer();
 
 var terminal: Terminal = undefined;
 
-fn print(comptime fmt: []const u8, args: anytype) !void {
-    const writer = terminal.tty.writer();
-    try writer.print(fmt, args);
-}
-
 pub fn main() !void {
     try stdout.print("{s}\nPress 'q' to quit.\n", .{auk.description});
 
     terminal = try Terminal.init(.{});
     try terminal.into(.raw);
+    var reader = terminal.reader();
+    var writer = terminal.tty.writer();
     defer {
-        terminal.into(.canonical) catch {};
-        print("Quitting...\n", .{}) catch {};
-        std.Thread.sleep(std.time.ns_per_s / 2);
+        writer.print("\nQuitting...\n", .{}) catch {};
+        terminal.deinit();
     }
 
-    var reader = terminal.reader();
-    try print("{}", .{auk.mouse.track});
+    try writer.print("{}", .{auk.mouse.track});
     while (true) {
         const ev = reader.read() orelse continue;
-        try print("{}{}", .{ auk.cursor.col(1), auk.erase.line(.right) });
+        try writer.print("{}{}", .{ auk.cursor.col(1), auk.erase.line(.right) });
         switch (ev) {
             .key => |code| {
                 const Pack = packed struct(u16) {
@@ -40,26 +35,26 @@ pub fn main() !void {
 
                 const pack: Pack = @bitCast(code);
 
-                try print("key: ", .{});
-                if (pack.ctrl) try print("ctrl+", .{});
-                if (pack.alt) try print("alt+", .{});
-                if (pack.shift) try print("shift+", .{});
+                try writer.print("key: ", .{});
+                if (pack.ctrl) try writer.print("ctrl+", .{});
+                if (pack.alt) try writer.print("alt+", .{});
+                if (pack.shift) try writer.print("shift+", .{});
                 if (pack.nonascii) {
-                    try print("nonascii {}", .{pack.base});
+                    try writer.print("nonascii {}", .{pack.base});
                 } else if (std.ascii.isPrint(pack.base)) {
-                    try print("{c}", .{pack.base});
+                    try writer.print("{c}", .{pack.base});
                 } else {
-                    try print("{}", .{pack.base});
+                    try writer.print("{}", .{pack.base});
                 }
                 if (code == 'q') break;
             },
             .unicode => |code| {
                 var buf: [4]u8 = undefined;
                 _ = std.unicode.utf8Encode(code, &buf) catch unreachable;
-                try print("unicode: {s}", .{buf});
+                try writer.print("unicode: {s}", .{buf});
             },
-            .mouse => |mouse| try print("mouse: {}", .{mouse}),
-            .unhandled => |queue| try print("unhandled: {any}", .{queue}),
+            .mouse => |mouse| try writer.print("mouse: {}", .{mouse}),
+            .unhandled => |queue| try writer.print("unhandled: {any}", .{queue}),
         }
     }
 }
