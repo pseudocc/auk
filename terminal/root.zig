@@ -31,14 +31,33 @@ raw: posix.termios,
 buffered: BufferedWriter,
 
 pub fn init(input: RawInput) !Terminal {
-    const tty = try std.fs.cwd().openFileZ("/dev/tty", .{
+    var self: Terminal = undefined;
+    self.tty = try std.fs.cwd().openFileZ("/dev/tty", .{
         .mode = .read_write,
         .allow_ctty = true,
     });
+    self.buffered = BufferedWriter{ .unbuffered_writer = self.tty.writer() };
 
-    const canonical = try posix.tcgetattr(tty.handle);
-    var raw = canonical;
+    const now = try posix.tcgetattr(self.tty.handle);
+    self.canonical = now;
+    self.raw = now;
 
+    if (now.lflag.ICANON) {
+        self.mode = .canonical;
+    }
+    else {
+        self.mode = .raw;
+
+        var canonical = &self.canonical;
+        canonical.iflag.ICRNL = true;
+        canonical.oflag.OPOST = true;
+        canonical.lflag.ECHO = true;
+        canonical.lflag.ICANON = true;
+        canonical.lflag.ISIG = true;
+        canonical.lflag.IEXTEN = true;
+    }
+
+    var raw = &self.raw;
     raw.iflag.BRKINT = false;
     raw.iflag.ICRNL = false;
     raw.iflag.INPCK = false;
@@ -52,21 +71,15 @@ pub fn init(input: RawInput) !Terminal {
     raw.lflag.ICANON = false;
     raw.lflag.ISIG = false;
     raw.lflag.IEXTEN = false;
-
     raw.cc[@as(u32, @intFromEnum(posix.V.MIN))] = input.vmin;
     raw.cc[@as(u32, @intFromEnum(posix.V.TIME))] = input.vtime;
 
-    return .{
-        .tty = tty,
-        .mode = .canonical,
-        .canonical = canonical,
-        .raw = raw,
-        .buffered = .{ .unbuffered_writer = tty.writer() },
-    };
+    return self;
 }
 
 pub fn into(self: *Terminal, mode: Mode) !void {
-    if (mode == self.mode) return;
+    if (mode == self.mode)
+        return;
 
     const termios = switch (mode) {
         .canonical => self.canonical,
@@ -78,7 +91,6 @@ pub fn into(self: *Terminal, mode: Mode) !void {
 }
 
 pub fn deinit(self: *Terminal) void {
-    self.into(.canonical) catch {};
     self.tty.close();
 }
 

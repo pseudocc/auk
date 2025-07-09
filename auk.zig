@@ -14,11 +14,14 @@ pub fn main() !void {
     var reader = terminal.reader();
     var writer = terminal.tty.writer();
     defer {
+        terminal.into(.canonical) catch {};
         writer.print("\nQuitting...\n", .{}) catch {};
         terminal.deinit();
     }
 
     try writer.print("{}", .{auk.mouse.track});
+    defer writer.print("{}", .{auk.mouse.untrack}) catch {};
+
     while (true) {
         const ev = reader.read() orelse continue;
         try writer.print("{}{}", .{ auk.cursor.col(1), auk.erase.line(.right) });
