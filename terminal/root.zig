@@ -16,13 +16,6 @@ const Mode = enum {
     raw,
 };
 
-/// Raw input mode
-/// default: Fully non-blocking
-const RawInput = struct {
-    vtime: u8 = 0,
-    vmin: u8 = 0,
-};
-
 tty: File,
 mode: Mode,
 canonical: posix.termios,
@@ -30,7 +23,7 @@ raw: posix.termios,
 buffer: [4096]u8,
 tty_writer: std.fs.File.Writer,
 
-pub fn init(input: RawInput) !Terminal {
+pub fn init() !Terminal {
     var self: Terminal = undefined;
     self.tty = try std.fs.cwd().openFileZ("/dev/tty", .{
         .mode = .read_write,
@@ -71,8 +64,8 @@ pub fn init(input: RawInput) !Terminal {
     raw.lflag.ICANON = false;
     raw.lflag.ISIG = false;
     raw.lflag.IEXTEN = false;
-    raw.cc[@as(u32, @intFromEnum(posix.V.MIN))] = input.vmin;
-    raw.cc[@as(u32, @intFromEnum(posix.V.TIME))] = input.vtime;
+    raw.cc[@as(u32, @intFromEnum(posix.V.MIN))] = 0;
+    raw.cc[@as(u32, @intFromEnum(posix.V.TIME))] = 0;
 
     return self;
 }

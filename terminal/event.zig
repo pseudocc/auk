@@ -163,6 +163,7 @@ const QMARK = std.unicode.utf8Decode("�") catch unreachable;
 
 pub const Reader = struct {
     tty: File,
+    timeout: i32 = 10,
     // Super efficient 2 pointers buffer
     buffer: [BUFSZ]u8,
     start: usize,
@@ -250,7 +251,17 @@ pub const Reader = struct {
     pub fn read(self: *Reader) ?Event {
         if (self.process()) |event| return event;
 
-        const bytes_read = self.tty.read(self.buffer[self.end..]) catch 0;
+        var pollfd = std.posix.pollfd{
+            .fd = self.tty.handle,
+            .events = std.posix.POLL.IN,
+            .revents = 0,
+        };
+        const n = std.posix.poll(@ptrCast(&pollfd), self.timeout)
+            catch return null;
+        if (n == 0) return null;
+
+        const bytes_read = self.tty.read(self.buffer[self.end..])
+            catch return null;
         if (bytes_read == 0) return null;
 
         self.end += bytes_read;

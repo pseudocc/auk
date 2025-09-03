@@ -10,7 +10,7 @@ pub fn main() !void {
     try stdout.print("{s}\nPress 'q' to quit.\n", .{auk.description});
     try stdout.flush();
 
-    var terminal = try Terminal.init(.{});
+    var terminal = try Terminal.init();
     try terminal.into(.raw);
     var reader = terminal.reader();
     var writer = terminal.writer();
