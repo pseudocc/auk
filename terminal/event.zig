@@ -18,8 +18,8 @@ pub const keys = struct {
         base: u8,
         shift: bool,
         alt: bool,
-        crtl: bool,
-        noniscii: bool,
+        ctrl: bool,
+        nonascii: bool,
         padding: u4,
     };
 

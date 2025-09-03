@@ -29,16 +29,7 @@ pub fn main() !void {
         try writer.print("{f}{f}", .{ auk.cursor.col(1), auk.erase.line(.right) });
         switch (ev) {
             .key => |code| {
-                const Pack = packed struct(u16) {
-                    base: u8,
-                    shift: bool,
-                    alt: bool,
-                    ctrl: bool,
-                    nonascii: bool,
-                    padding: u4,
-                };
-
-                const pack: Pack = @bitCast(code);
+                const pack: Terminal.keys.Pack = @bitCast(code);
 
                 try writer.print("key: ", .{});
                 if (pack.ctrl) try writer.print("ctrl+", .{});
