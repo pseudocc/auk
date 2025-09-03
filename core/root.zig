@@ -47,7 +47,7 @@ pub const SGR = @import("sgr.zig");
 pub const version = manifest.version;
 
 pub const description = std.fmt.comptimePrint(
-    "🌊AUK🐦 {} ({s}-{s}-{s} {s}) [ZIG {}]",
+    "🌊AUK🐦 {f} ({s}-{s}-{s} {s}) [ZIG {f}]",
     .{
         version,
         @tagName(builtin.cpu.arch),

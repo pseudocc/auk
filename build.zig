@@ -21,14 +21,25 @@ pub fn build(b: *std.Build) !void {
         .root_source_file = b.path("terminal/root.zig"),
     });
 
-    const auk = b.addExecutable(.{
-        .name = "auk",
+    const evtmon_module = b.createModule(.{
         .root_source_file = b.path("auk.zig"),
+        .imports = &.{
+            .{
+                .name = "auk",
+                .module = core_module,
+            },
+            .{
+                .name = "auk.terminal",
+                .module = terminal_module,
+            },
+        },
         .target = target,
         .optimize = optimize,
     });
-    auk.root_module.addImport("auk", core_module);
-    auk.root_module.addImport("auk.terminal", terminal_module);
+    const auk = b.addExecutable(.{
+        .name = "auk",
+        .root_module = evtmon_module,
+    });
     b.installArtifact(auk);
 
     const run_auk = b.addRunArtifact(auk);
@@ -38,9 +49,7 @@ pub fn build(b: *std.Build) !void {
     run_auk_step.dependOn(&run_auk.step);
 
     const auk_test = b.addTest(.{
-        .root_source_file = b.path("auk.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = evtmon_module,
     });
     auk_test.root_module.addImport("auk", core_module);
     const run_auk_test = b.addRunArtifact(auk_test);

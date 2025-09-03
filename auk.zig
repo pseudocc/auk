@@ -2,29 +2,31 @@ const std = @import("std");
 const auk = @import("auk");
 const Terminal = @import("auk.terminal");
 
-const stdout = std.io.getStdOut().writer();
-
-var terminal: Terminal = undefined;
+var stdout_buffer: [1024]u8 = undefined;
+var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+const stdout = &stdout_writer.interface;
 
 pub fn main() !void {
     try stdout.print("{s}\nPress 'q' to quit.\n", .{auk.description});
+    try stdout.flush();
 
-    terminal = try Terminal.init(.{});
+    var terminal = try Terminal.init(.{});
     try terminal.into(.raw);
     var reader = terminal.reader();
-    var writer = terminal.tty.writer();
+    var writer = terminal.writer();
     defer {
         terminal.into(.canonical) catch {};
         writer.print("\nQuitting...\n", .{}) catch {};
         terminal.deinit();
     }
 
-    try writer.print("{}", .{auk.mouse.track});
-    defer writer.print("{}", .{auk.mouse.untrack}) catch {};
+    try writer.print("{f}", .{auk.mouse.track});
+    try writer.flush();
+    defer writer.print("{f}", .{auk.mouse.untrack}) catch {};
 
     while (true) {
         const ev = reader.read() orelse continue;
-        try writer.print("{}{}", .{ auk.cursor.col(1), auk.erase.line(.right) });
+        try writer.print("{f}{f}", .{ auk.cursor.col(1), auk.erase.line(.right) });
         switch (ev) {
             .key => |code| {
                 const Pack = packed struct(u16) {
@@ -59,6 +61,7 @@ pub fn main() !void {
             .mouse => |mouse| try writer.print("mouse: {}", .{mouse}),
             .unhandled => |queue| try writer.print("unhandled: {any}", .{queue}),
         }
+        try writer.flush();
     }
 }
 

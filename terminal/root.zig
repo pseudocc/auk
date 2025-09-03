@@ -5,7 +5,6 @@ const posix = std.posix;
 const linux = std.os.linux;
 
 const File = std.fs.File;
-const BufferedWriter = std.io.BufferedWriter(4096, File.Writer);
 
 pub const Size = struct {
     width: u16,
@@ -28,7 +27,8 @@ tty: File,
 mode: Mode,
 canonical: posix.termios,
 raw: posix.termios,
-buffered: BufferedWriter,
+buffer: [4096]u8,
+tty_writer: std.fs.File.Writer,
 
 pub fn init(input: RawInput) !Terminal {
     var self: Terminal = undefined;
@@ -36,7 +36,7 @@ pub fn init(input: RawInput) !Terminal {
         .mode = .read_write,
         .allow_ctty = true,
     });
-    self.buffered = BufferedWriter{ .unbuffered_writer = self.tty.writer() };
+    self.tty_writer = self.tty.writer(&self.buffer);
 
     const now = try posix.tcgetattr(self.tty.handle);
     self.canonical = now;
@@ -91,6 +91,7 @@ pub fn into(self: *Terminal, mode: Mode) !void {
 }
 
 pub fn deinit(self: *Terminal) void {
+    self.tty_writer.interface.flush() catch {};
     self.tty.close();
 }
 
@@ -102,6 +103,10 @@ pub fn size(self: *Terminal) !Size {
         else => return error.IOCGWINSZ,
     }
     return .{ .width = ws.col, .height = ws.row };
+}
+
+pub fn writer(self: *Terminal) *std.Io.Writer {
+    return &self.tty_writer.interface;
 }
 
 pub fn reader(self: Terminal) event.Reader {
