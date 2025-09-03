@@ -3,90 +3,72 @@
 
   inputs.nixpkgs.url = "github:pseudocc/nixpkgs/zig-0.15.1";
 
-  outputs = {
-    self,
-    nixpkgs,
-    ...
-  } @ inputs: let
-    inherit (nixpkgs) lib;
-
-    eachSystem = fn:
-      lib.foldl' (
-        acc: system:
-          lib.recursiveUpdate
-          acc
-          (lib.mapAttrs (_: value: {${system} = value;}) (fn system))
-      ) {}
-      lib.platforms.unix;
-
-    version = with builtins; let
-      matched_group = match ''.+\.version = "([^"]+)",.+'' (readFile ./build.zig.zon);
-    in elemAt matched_group 0;
-  in
-    eachSystem (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-        zig = pkgs.zig;
-        zls = pkgs.zls;
-
-        mkauk = optimize: pkgs.stdenv.mkDerivation {
-          inherit version;
-          pname = "auk";
-
-          buildInputs = [
-            (zig.hook.overrideAttrs {
-              zig_default_flags = [
-                "-Dcpu=baseline"
-                "--release=${optimize}"
-                "--color off"
-              ];
-            })
+  outputs = { self, nixpkgs }: import ./nix/each-system.nix nixpkgs (
+    system: pkgs: let
+      inherit (pkgs) lib;
+      name = "auk";
+      version = import ./nix/version.nix ./build.zig.zon;
+      mkDrv = optimize: pkgs.stdenv.mkDerivation {
+        inherit version;
+        pname = name;
+        src = with lib.fileset; toSource {
+          root = ./.;
+          fileset = unions [
+            ./core
+            ./terminal
+            ./manifest.zig
+            ./auk.zig
+            ./build.zig
+            ./build.zig.zon
+            ./LICENSE
           ];
+        };
 
-          src = with lib.fileset; toSource {
-            root = ./.;
-            fileset = unions [
-              ./core
-              ./terminal
-              ./manifest.zig
-              ./auk.zig
-              ./build.zig
-              ./build.zig.zon
-              ./LICENSE
+        buildInputs = [
+          (pkgs.zig.hook.overrideAttrs {
+            zig_default_flags = [
+              "-Dcpu=baseline"
+              "--release=${optimize}"
+              "--color off"
             ];
-          };
+          })
+        ];
 
-          zigBuildFlags = [ "-Doptimize=${optimize}" ];
-          passthru = { inherit optimize zig; };
+        outputs = [ "out" "doc" ];
+        postInstall = ''
+          install -D -m644 LICENSE $doc/share/doc/LICENSE
+        '';
 
-          meta = {
-            description = "AUK";
-            license = lib.licenses.free;
-            mainProgram = "auk";
-          };
+        meta = {
+          description = "AUK event monitor";
+          license = lib.licenses.free;
+          mainProgram = name;
         };
-      in {
-        devShells.default = pkgs.mkShell {
-          buildInputs = [ zig zls ];
-        };
+      };
+    in {
+      devShells.default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          zig
+          zls
+        ];
+      };
 
-        apps = let
-          ctor.auk = name: pkg: {
-            inherit name;
-            value = {
-              type = "app";
-              program = lib.getExe pkg;
-            };
-          };
-          entries = lib.mapAttrsToList ctor.auk rec {
-            auk-debug = mkauk "off";
-            auk-release-fast = mkauk "fast";
-            auk-release-safe = mkauk "safe";
-            auk-release-small = mkauk "small";
-            auk = auk-release-fast;
-            default = auk;
-          };
-        in builtins.listToAttrs entries;
-      }
-    );
+      packages = {
+        "${name}-debug" = mkDrv "off";
+        "${name}-release-fast" = mkDrv "fast";
+        "${name}-release-small" = mkDrv "small";
+        "${name}-release-safe" = mkDrv "safe";
+        ${name} = mkDrv "safe";
+        default = mkDrv "safe";
+      };
+
+      apps = let
+        mkApp = name: drv: {
+          type = "app";
+          program = lib.getExe drv;
+        };
+      in
+        lib.mapAttrs mkApp self.packages.${system};
+    }
+  );
 }
