@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Writer = std.Io.Writer;
 
-fn printEsc(comptime escape: bool, writer: *Writer) Writer.Error!void {
+fn printEsc(escape: bool, writer: *Writer) Writer.Error!void {
     const esc = std.ascii.control_code.esc;
     if (escape) {
         try writer.print("\\x{x}", .{esc});
@@ -16,28 +16,27 @@ pub const ESC = struct {
     command: []const u8,
     n: ?u8 = null,
 
-    fn AltFormat(comptime escape: bool) type {
-        return struct {
-            context: ESC,
+    const AltFormat = struct {
+        context: ESC,
+        is_tty: ?bool,
 
-            pub fn format(ctx: @This(), writer: *Writer) Writer.Error!void {
-                const self = ctx.context;
-                try printEsc(escape, writer);
-                if (self.n) |n| {
-                    try writer.print("{d}", .{n});
-                }
-                try writer.print("{s}", .{self.command});
+        pub fn format(ctx: @This(), writer: *Writer) Writer.Error!void {
+            if (ctx.is_tty == false) return;
+            const self = ctx.context;
+            try printEsc(ctx.is_tty == null, writer);
+            if (self.n) |n| {
+                try writer.print("{d}", .{n});
             }
-        };
-    }
+            try writer.print("{s}", .{self.command});
+        }
+    };
 
     pub fn format(self: ESC, writer: *Writer) Writer.Error!void {
-        const altfmt = AltFormat(false){ .context = self };
-        try altfmt.format(writer);
+        try self.tty(true).format(writer);
     }
 
-    pub fn string(self: ESC) AltFormat(true) {
-        return .{ .context = self };
+    pub fn tty(self: ESC, is_tty: ?bool) AltFormat {
+        return .{ .context = self, .is_tty = is_tty };
     }
 };
 
@@ -109,55 +108,55 @@ pub const CSI = struct {
         };
     }
 
-    fn AltFormat(comptime escape: bool) type {
-        return struct {
-            context: CSI,
+    const AltFormat = struct {
+        context: CSI,
+        is_tty: ?bool,
 
-            pub fn format(ctx: @This(), writer: *Writer) Writer.Error!void {
-                const self = ctx.context;
-                const params: []const u16 = switch (self.params) {
-                    .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
-                    .disowned => |case| case,
-                    .none => &.{},
-                };
+        pub fn format(ctx: @This(), writer: *Writer) Writer.Error!void {
+            if (ctx.is_tty == false) return;
 
-                if (self.maybe_empty) {
-                    var skip = true;
-                    for (params) |param| {
-                        if (param != 0) {
-                            skip = false;
-                            break;
-                        }
-                    }
-                    if (skip) {
-                        return;
+            const self = ctx.context;
+            const params: []const u16 = switch (self.params) {
+                .owned => |case| std.mem.sliceTo(&case, CSI.Params.Sentinel),
+                .disowned => |case| case,
+                .none => &.{},
+            };
+
+            if (self.maybe_empty) {
+                var skip = true;
+                for (params) |param| {
+                    if (param != 0) {
+                        skip = false;
+                        break;
                     }
                 }
-
-                try printEsc(escape, writer);
-                try writer.writeByte('[');
-                if (self.dec) {
-                    try writer.writeByte('?');
+                if (skip) {
+                    return;
                 }
-
-                for (params, 0..) |param, i| {
-                    if (i != 0) {
-                        try writer.writeByte(';');
-                    }
-                    try writer.print("{d}", .{param});
-                }
-                try writer.print("{s}", .{self.command});
             }
-        };
-    }
+
+            try printEsc(ctx.is_tty == null, writer);
+            try writer.writeByte('[');
+            if (self.dec) {
+                try writer.writeByte('?');
+            }
+
+            for (params, 0..) |param, i| {
+                if (i != 0) {
+                    try writer.writeByte(';');
+                }
+                try writer.print("{d}", .{param});
+            }
+            try writer.print("{s}", .{self.command});
+        }
+    };
 
     pub fn format(self: CSI, writer: *Writer) Writer.Error!void {
-        const altfmt = AltFormat(false){ .context = self };
-        try altfmt.format(writer);
+        try self.tty(true).format(writer);
     }
 
-    pub fn string(self: CSI) AltFormat(true) {
-        return .{ .context = self };
+    pub fn tty(self: CSI, is_tty: ?bool) AltFormat {
+        return .{ .context = self, .is_tty = is_tty };
     }
 };
 
