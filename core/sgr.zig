@@ -4,21 +4,21 @@ const CSI = @import("control.zig").CSI;
 const SGR = @This();
 
 /// Bold (1) Unbold (22)
-bd: ?bool = null,
+bold: ?bool = null,
 /// Faint (2) Unfaint (22)
-ft: ?bool = null,
+faint: ?bool = null,
 /// Italic (3) Unitalic (23)
-it: ?bool = null,
+italic: ?bool = null,
 /// Underline (4) Ununderline (24)
-ul: ?bool = null,
+underline: ?bool = null,
 /// Blink (5) Unblink (25)
-bl: ?bool = null,
+blink: ?bool = null,
 /// Inverse (7) Uninverse (27)
-rv: ?bool = null,
+inverse: ?bool = null,
 /// Conceal (8) Reveal (28)
-hd: ?bool = null,
+conceal: ?bool = null,
 /// Strike (9) Unstrike (29)
-st: ?bool = null,
+strike: ?bool = null,
 
 /// Foreground color
 fg: ?Color = null,
@@ -32,14 +32,14 @@ const Buffer = struct {
 
     fn init(sgr: SGR) Buffer {
         var buffer = std.mem.zeroes(Buffer);
-        if (sgr.bd) |enable| buffer.append(if (enable) 1 else 22);
-        if (sgr.ft) |enable| buffer.append(if (enable) 2 else 22);
-        if (sgr.it) |enable| buffer.append(if (enable) 3 else 23);
-        if (sgr.ul) |enable| buffer.append(if (enable) 4 else 24);
-        if (sgr.bl) |enable| buffer.append(if (enable) 5 else 25);
-        if (sgr.rv) |enable| buffer.append(if (enable) 7 else 27);
-        if (sgr.hd) |enable| buffer.append(if (enable) 8 else 28);
-        if (sgr.st) |enable| buffer.append(if (enable) 9 else 29);
+        if (sgr.bold) |enable| buffer.append(if (enable) 1 else 22);
+        if (sgr.faint) |enable| buffer.append(if (enable) 2 else 22);
+        if (sgr.italic) |enable| buffer.append(if (enable) 3 else 23);
+        if (sgr.underline) |enable| buffer.append(if (enable) 4 else 24);
+        if (sgr.blink) |enable| buffer.append(if (enable) 5 else 25);
+        if (sgr.inverse) |enable| buffer.append(if (enable) 7 else 27);
+        if (sgr.conceal) |enable| buffer.append(if (enable) 8 else 28);
+        if (sgr.strike) |enable| buffer.append(if (enable) 9 else 29);
         if (sgr.fg) |color| buffer.appendColor(30, color);
         if (sgr.bg) |color| buffer.appendColor(40, color);
         return buffer;
@@ -143,7 +143,7 @@ test SGR {
     const E = @import("control.zig").Expect(SGR);
     const cases = .{
         .{ "\x1b[m", SGR{} },
-        .{ "\x1b[1m", SGR{ .bd = true } },
+        .{ "\x1b[1m", SGR{ .bold = true } },
         .{ "\x1b[31m", SGR{ .fg = .red } },
         .{
             "\x1b[38;5;1m",
@@ -159,7 +159,7 @@ test SGR {
         },
         .{
             "\x1b[1;31m",
-            SGR{ .bd = true, .fg = .red },
+            SGR{ .bold = true, .fg = .red },
         },
     };
 
